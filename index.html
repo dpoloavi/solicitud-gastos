@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Gastos</title>
+    <!-- Tailwind CSS para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Librería html2pdf para descargar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @media print {
+            body { background: white; padding: 0; }
+            .no-print { display: none !important; }
+            .pdf-card { box-shadow: none !important; border: none !important; padding: 0 !important; }
+        }
+        .seccion-deshabilitada {
+            opacity: 0.4;
+            filter: grayscale(0.2);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 py-8 px-4 font-sans text-gray-800">
+
+
+    <!-- Documento Principal -->
+    <div id="pdf-content" class="max-w-4xl mx-auto bg-white p-5">
+        
+        <!-- Título principal -->
+        <h2 class="text-2xl font-black text-black tracking-wide mb-2 uppercase">SOLICITUD DE GASTOS</h2>
+
+        <!-- Fila Barrio/Rama y Estaca -->
+        <div class="flex justify-between items-center text-sm mb-1 pb-2">
+            <div class="flex items-center space-x-2">
+                <span class="font-bold text-black">Barrio/Rama:</span>
+                <select class="border-b border-black bg-transparent focus:outline-none px-1 py-0.5 font-medium cursor-pointer">
+                    <option value="Rio Seco">Rio Seco</option>
+                    <option value="Gran Chimu">Gran Chimu</option>
+                    <option value="Granados">Granados</option>
+                    <option value="Alto Trujillo">Alto Trujillo</option>
+                    <option value="Florencia de Mora 1">Florencia de Mora 1</option>
+                    <option value="Florencia de Mora 2">Florencia de Mora 2</option>
+                    <option value="Otuzco">Otuzco</option>
+                </select>
+            </div>
+            <div class="text-sm font-bold text-black">
+                Estaca: Este
+            </div>
+        </div>
+
+<!-- Bloque Estilo Tarjeta (Solicitante + Fecha, Cobrador, Dirección) -->
+        <div class="bg-gray-50 p-2 rounded-xl border border-gray-200 space-y-2 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                <div class="md:col-span-3">
+                    <label class="block font-bold text-xs text-gray-700 mb-1">Nombre del Solicitante (Nombres y Apellidos completos):</label>
+                    <input type="text" placeholder="Ej. Dennis Polo Avila" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-bold text-xs text-gray-700 mb-1">Fecha:</label>
+                    <input type="date" id="fecha-campo" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-bold text-xs text-gray-700 mb-1">
+                    Nombre del Cobrador <span class="italic font-normal text-gray-500">&lt;A quién se le depositará el dinero&gt;</span> (Nombres y Apellidos completos):
+                </label>
+                <input type="text" placeholder="Nombres y apellidos completos" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div>
+                <label class="block font-bold text-xs text-gray-700 mb-1">Dirección:</label>
+                <input type="text" placeholder="Dirección completa del cobrador o proveedor" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+        <!-- Propósito del Gasto / Nota Legal -->
+         <label class="block font-bold text-xs text-gray-700 mb-1">Propósito del Gasto:</label>
+        <div class="text-[9px] text-gray-600 bg-amber-50 border-l-4 border-amber-500 p-1 mb-1 italic">
+            "Los fondos de la Iglesia son sagrados, se han de utilizar sabiamente y proteger con esmero. Deben ser utilizados solamente por los líderes 
+            y miembros debidamente autorizados por ASPERSUD y para cumplir los fines religiosos, misionales,educativos,caritativos, sociales y otros
+            de la iglesia de acuerdo con las leyes peruanas para la realizacion de sus fines y el funcionamiento eficaz de la asociacion conforme a lo
+            establecido en el estatuto de ASPERSUD"
+        </div>
+<!-- SECCIÓN TIPO DE GASTO DINÁMICO (COMPACTA) -->
+<div class="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+    <label class="block font-bold text-[11px] text-gray-700 mb-2 uppercase">Seleccione el Tipo de Gasto:</label>
+    
+    <!-- Selector principal tipo pestañas -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+        <label class="flex items-center justify-center space-x-1 border-2 border-blue-600 bg-blue-50 py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-blue-950 select-none transition-all" id="label-presupuesto">
+            <input type="radio" name="tipo_gasto_unico" value="presupuesto" checked onchange="cambiarTipoGastoUnico()" class="hidden">
+            <span>Gasto del Presupuesto</span>
+        </label>
+        <label class="flex items-center justify-center space-x-1 border-2 border-gray-200 bg-white py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-gray-600 select-none transition-all" id="label-ayuno">
+            <input type="radio" name="tipo_gasto_unico" value="ayuno" onchange="cambiarTipoGastoUnico()" class="hidden">
+            <span>Gastos de Ofrendas de Ayuno</span>
+        </label>
+    </div>
+
+    <!-- BLOQUE 1: GASTO DEL PRESUPUESTO -->
+    <div id="seccion-presupuesto" class="space-y-2 bg-white p-3 rounded-xl border border-gray-200">
+        <h4 class="font-bold text-blue-900 text-[11px] uppercase border-b pb-1">Detalles - Gasto del Presupuesto</h4>
+        <div>
+            <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Descripción:</label>
+            <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Descripción general del gasto">
+        </div>
+        <div>
+            <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Fortalecer la fe de los miembros a través de:</label>
+            <textarea rows="2" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Propósito o mensaje inspirador..."></textarea>
+        </div>
+        
+        <!-- Categorías de Presupuesto -->
+        <div class="pt-1">
+            <label class="block font-bold text-[11px] text-gray-700 mb-1">Categorías y Cantidades:</label>
+            <div id="contenedor-cat-presupuesto" class="space-y-1.5">
+                <div class="flex items-center space-x-2">
+                    <select class="w-2/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800">
+                        <option value="Administración">Administración</option>
+                        <option value="JAS">JAS</option>
+                        <option value="Quórum de Élderes">Quórum de Élderes</option>
+                        <option value="Sociedad de Socorro">Sociedad de Socorro</option>
+                        <option value="Esc. Dominical">Esc. Dominical</option>
+                        <option value="Primaria">Primaria</option>
+                        <option value="HH.JJ">HH.JJ</option>
+                        <option value="MM.JJ">MM.JJ</option>
+                    </select>
+                    <input type="number" step="0.01" placeholder="S/ Monto" class="w-1/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-center text-gray-800">
+                    <button onclick="eliminarFilaCat(this)" class="no-print text-red-500 font-bold px-1 hover:text-red-700 text-sm">×</button>
+                </div>
+            </div>
+            <button onclick="agregarCatPresupuesto()" class="no-print mt-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Añadir otra categoría</button>
+        </div>
+    </div>
+
+    <!-- BLOQUE 2: GASTOS DE OFRENDAS DE AYUNO -->
+    <div id="seccion-ayuno" class="space-y-2 bg-white p-3 rounded-xl border border-gray-200 hidden">
+        <h4 class="font-bold text-blue-900 text-[11px] uppercase border-b pb-1">Detalles - Gastos de Ofrendas de Ayuno</h4>
+        <div>
+            <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Descripción:</label>
+            <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Descripción del gasto de bienestar">
+        </div>
+        <div>
+            <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Ayuda de bienestar cuyo propósito es:</label>
+            <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Propósito...">
+        </div>        
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Beneficiario de la ayuda:</label>
+                <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nombre beneficiario">
+            </div>
+            <div>
+                <label class="block font-semibold text-[11px] text-gray-700 mb-0.5">Código de miembro:</label>
+                <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Código">
+            </div>
+        </div>
+
+        <!-- Categorías de Ayuno -->
+        <div class="pt-1">
+            <label class="block font-bold text-[11px] text-gray-700 mb-1">Categorías y Cantidades:</label>
+            <div id="contenedor-cat-ayuno" class="space-y-1.5">
+                <div class="flex items-center space-x-2">
+                    <select class="w-2/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800">
+                        <option value="Gastos Médicos">Gastos Médicos</option>
+                        <option value="Gastos de Vivienda">Gastos de Vivienda</option>
+                    </select>
+                    <input type="number" step="0.01" placeholder="S/ Monto" class="w-1/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-center text-gray-800">
+                    <button onclick="eliminarFilaCat(this)" class="no-print text-red-500 font-bold px-1 hover:text-red-700 text-sm">×</button>
+                </div>
+            </div>
+            <button onclick="agregarCatAyuno()" class="no-print mt-1.5 text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Añadir otra categoría</button>
+        </div>
+    </div>
+</div>
+ <!-- Propósito del Gasto / Nota Legal -->
+         <label class="block font-bold text-xs text-gray-700 mb-1">Propósito del Gasto:</label>
+        <div class="text-[9px] text-gray-600 bg-amber-50 border-l-4 border-amber-500 p-1 mb-1 italic">
+            "Los fondos de la Iglesia son sagrados, se han de utilizar sabiamente y proteger con esmero. Deben ser utilizados solamente por los líderes 
+            y miembros debidamente autorizados por ASPERSUD y para cumplir los fines religiosos, misionales,educativos,caritativos, sociales y otros
+            de la iglesia de acuerdo con las leyes peruanas para la realizacion de sus fines y el funcionamiento eficaz de la asociacion conforme a lo
+            establecido en el estatuto de ASPERSUD"
+        </div>
+
+<!-- SECCIÓN DE AUTORIZACIÓN Y FIRMAS (ORGANIZADA EN UNA SOLA FILA HORIZONTAL) -->
+<div class="mb-10 bg-gray-50 p-3 rounded-xl border border-gray-200 space-y-2">
+    <!-- Texto Declaratorio Oficial -->
+    <p class="font-bold italic text-[11px] text-gray-800 border-b border-gray-300 pb-1">
+        Como Obispo/Pdte. de Rama, autorizo el uso de estos fondos para los propósitos descritos anteriormente.
+    </p>
+
+    <!-- CONTENEDOR DE FIRMAS EN 3 COLUMNAS (UNA SOLA FILA) -->
+    <div class="grid grid-cols-3 gap-2">
+        
+        <!-- 1. OBISPO / PDTE. DE RAMA -->
+        <div class="bg-white p-2 rounded-lg border border-gray-200 space-y-1.5 flex flex-col justify-between">
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5 leading-tight">Obispo / Pdte. Rama (Nombre):</label>
+                <input type="text" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Nombre completo">
+            </div>
+
+            <!-- Recuadro de Firma Compacto -->
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Firma:</label>
+                <div class="w-full h-10 border border-dashed border-gray-400 rounded-md bg-gray-50 flex items-center justify-center relative overflow-hidden group">
+                    <img id="img-firma-obispo" class="max-h-full max-w-full object-contain hidden" alt="Firma Obispo">
+                    <span id="placeholder-obispo" class="text-[9px] text-gray-400 italic">Sin firma</span>
+                    
+                    <div class="no-print absolute inset-0 bg-black/40 flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onclick="abrirModalFirma('obispo')" class="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-blue-700">Dibujar</button>
+                        <label class="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-emerald-700 cursor-pointer">
+                            Subir
+                            <input type="file" accept="image/*" class="hidden" onchange="cargarFotoFirma(event, 'obispo')">
+                        </label>
+                        <button type="button" onclick="limpiarFirma('obispo')" class="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded shadow hover:bg-red-700">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Fecha:</label>
+                <input type="date" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <!-- 2. SECRETARIO -->
+        <div class="bg-white p-2 rounded-lg border border-gray-200 space-y-1.5 flex flex-col justify-between">
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5 leading-tight">Secretario (Nombre):</label>
+                <input type="text" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Nombre completo">
+            </div>
+
+            <!-- Recuadro de Firma Compacto -->
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Firma:</label>
+                <div class="w-full h-10 border border-dashed border-gray-400 rounded-md bg-gray-50 flex items-center justify-center relative overflow-hidden group">
+                    <img id="img-firma-secretario" class="max-h-full max-w-full object-contain hidden" alt="Firma Secretario">
+                    <span id="placeholder-secretario" class="text-[9px] text-gray-400 italic">Sin firma</span>
+                    
+                    <div class="no-print absolute inset-0 bg-black/40 flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onclick="abrirModalFirma('secretario')" class="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-blue-700">Dibujar</button>
+                        <label class="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-emerald-700 cursor-pointer">
+                            Subir
+                            <input type="file" accept="image/*" class="hidden" onchange="cargarFotoFirma(event, 'secretario')">
+                        </label>
+                        <button type="button" onclick="limpiarFirma('secretario')" class="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded shadow hover:bg-red-700">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Fecha:</label>
+                <input type="date" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <!-- 3. COBRADOR -->
+        <div class="bg-white p-2 rounded-lg border border-gray-200 space-y-1.5 flex flex-col justify-between">
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5 leading-tight">Cobrador (Nombre):</label>
+                <input type="text" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Nombre completo">
+            </div>
+
+            <!-- Recuadro de Firma Compacto -->
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Firma:</label>
+                <div class="w-full h-10 border border-dashed border-gray-400 rounded-md bg-gray-50 flex items-center justify-center relative overflow-hidden group">
+                    <img id="img-firma-cobrador" class="max-h-full max-w-full object-contain hidden" alt="Firma Cobrador">
+                    <span id="placeholder-cobrador" class="text-[9px] text-gray-400 italic">Sin firma</span>
+                    
+                    <div class="no-print absolute inset-0 bg-black/40 flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onclick="abrirModalFirma('cobrador')" class="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-blue-700">Dibujar</button>
+                        <label class="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-emerald-700 cursor-pointer">
+                            Subir
+                            <input type="file" accept="image/*" class="hidden" onchange="cargarFotoFirma(event, 'cobrador')">
+                        </label>
+                        <button type="button" onclick="limpiarFirma('cobrador')" class="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded shadow hover:bg-red-700">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Fecha:</label>
+                <input type="date" class="w-full border border-gray-300 rounded-md py-0.5 px-1.5 bg-white text-[11px] text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODAL PARA DIBUJAR LA FIRMA (NO-PRINT) -->
+<div id="modal-firma" class="no-print fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-4 w-full max-w-md space-y-3">
+        <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-gray-800 uppercase">Dibujar Firma Digital</h3>
+            <button onclick="cerrarModalFirma()" class="text-gray-400 hover:text-gray-600 font-bold text-base">✕</button>
+        </div>
+        
+        <p class="text-[11px] text-gray-500">Usa el ratón o el dedo sobre el recuadro para firmar:</p>
+        
+        <div class="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex justify-center">
+            <canvas id="canvas-firma" width="320" height="100" class="w-full h-24 touch-none cursor-crosshair rounded-lg"></canvas>
+        </div>
+        
+        <div class="flex justify-between items-center pt-2">
+            <button type="button" onclick="limpiarCanvasModal()" class="text-xs text-red-600 hover:underline font-semibold">Limpiar Trazo</button>
+            <div class="space-x-2">
+                <button type="button" onclick="cerrarModalFirma()" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-300">Cancelar</button>
+                <button type="button" onclick="guardarFirmaCanvas()" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Aceptar y Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN META DE ASISTENCIA -->
+<div class="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+    <h4 class="font-bold text-xs text-gray-800 uppercase mb-2 text-center">Meta de asistencia</h4>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300 text-center bg-white rounded-lg overflow-hidden text-xs">
+            <thead>
+                <tr class="bg-gray-100 text-gray-700 font-semibold">
+                    <th class="border border-gray-300 p-1.5 text-[11px]">Investigadores:</th>
+                    <th class="border border-gray-300 p-1.5 text-[11px]">Menos activos:</th>
+                    <th class="border border-gray-300 p-1.5 text-[11px]">Activos:</th>
+                    <th class="border border-gray-300 p-1.5 text-[11px]">Líderes e Invitados:</th>
+                    <th class="border border-gray-300 p-1.5 text-[11px] bg-gray-200">Total de Asistencia</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" min="0" placeholder="cant." oninput="calcularTotalAsistencia()" id="asist-investigadores" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" min="0" placeholder="cant." oninput="calcularTotalAsistencia()" id="asist-menos-activos" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" min="0" placeholder="cant." oninput="calcularTotalAsistencia()" id="asist-activos" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" min="0" placeholder="cant." oninput="calcularTotalAsistencia()" id="asist-lideres" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1 bg-gray-50">
+                        <input type="text" id="asist-total" readonly value="0" class="w-full text-center font-bold border-0 bg-transparent py-1 text-xs text-blue-900 focus:outline-none">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+<!-- MODAL PARA DIBUJAR LA FIRMA (NO-PRINT) -->
+<div id="modal-firma" class="no-print fixed inset-0 bg-black/60 hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-4 w-full max-w-md space-y-3">
+        <div class="flex justify-between items-center border-b pb-2">
+            <h3 class="font-bold text-xs text-gray-800 uppercase">Dibujar Firma Digital</h3>
+            <button onclick="cerrarModalFirma()" class="text-gray-400 hover:text-gray-600 font-bold text-base">✕</button>
+        </div>
+        
+        <p class="text-[11px] text-gray-500">Usa el ratón o el dedo sobre la recuadro para firmar:</p>
+        
+        <div class="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <canvas id="canvas-firma" width="400" height="150" class="w-full h-36 touch-none cursor-crosshair rounded-lg"></canvas>
+        </div>
+        
+        <div class="flex justify-between items-center pt-2">
+            <button type="button" onclick="limpiarCanvasModal()" class="text-xs text-red-600 hover:underline font-semibold">Limpiar Trazo</button>
+            <div class="space-x-2">
+                <button type="button" onclick="cerrarModalFirma()" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-300">Cancelar</button>
+                <button type="button" onclick="guardarFirmaCanvas()" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700">Aceptar y Guardar</button>
+            </div>
+        </div>
+    </div>
+</div> 
+<!-- SECCIÓN COMITÉ DE LIMPIEZA DINÁMICO -->
+<div class="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+    <h4 class="font-bold text-xs text-gray-800 uppercase mb-2">Comité de Limpieza</h4>
+    
+    <!-- Fila superior: Título de la tabla y Fecha de Actividad -->
+    <div class="grid grid-cols-4 gap-2 mb-2 items-center">
+        <div class="col-span-3">
+            <label class="block font-semibold text-[11px] text-gray-700">Apellidos y Nombres de los participantes:</label>
+        </div>
+        <div class="col-span-1">
+            <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Fecha Actividad:</label>
+            <input type="date" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+    </div>
+
+    <!-- Contenedor dinámico de filas de participantes -->
+    <div id="contenedor-comite-limpieza" class="space-y-1.5">
+        <!-- Fila inicial -->
+        <div class="flex items-center space-x-2">
+            <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Apellidos y Nombre">
+            <button type="button" onclick="eliminarFilaComite(this)" class="no-print text-red-500 font-bold px-1.5 hover:text-red-700 text-sm">×</button>
+        </div>
+    </div>
+
+    <!-- Botón para añadir más filas -->
+    <button type="button" onclick="agregarFilaComite()" class="no-print mt-2 text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Añadir participante o descripción</button>
+</div>      
+
+<!-- SECCIÓN PLAN DE PRESUPUESTO DINÁMICO (3 COLUMNAS) -->
+<div class="mb-4 bg-gray-50 p-3 rounded-xl border border-gray-200">
+    <h4 class="font-bold text-xs text-gray-800 uppercase mb-2 text-center">Plan de Presupuesto</h4>
+    
+    <div class="overflow-x-auto">
+        <table class="w-full border-collapse border border-gray-300 text-center bg-white rounded-lg overflow-hidden text-xs">
+            <thead>
+                <tr class="bg-gray-100 text-gray-700 font-semibold">
+                    <th class="border border-gray-300 p-1.5 w-20 text-[11px]">Cantidad</th>
+                    <th class="border border-gray-300 p-1.5 text-[11px]">Descripción</th>
+                    <th class="border border-gray-300 p-1.5 w-28 text-[11px]">Importe S/</th>
+                    <th class="border border-gray-300 p-1.5 w-10 no-print">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="contenedor-filas-presupuesto">
+                <!-- Fila inicial -->
+                <tr>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" min="1" value="" placeholder="1" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1">
+                        <input type="text" placeholder="Descripción del artículo o servicio" class="w-full border-0 bg-transparent py-1 px-2 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1">
+                        <input type="number" step="0.01" min="0" value="" placeholder="0.00" oninput="calcularTotalPresupuesto()" class="input-importe w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+                    </td>
+                    <td class="border border-gray-300 p-1 no-print text-center">
+                        <button type="button" onclick="eliminarFilaPresupuesto(this)" class="text-red-500 font-bold hover:text-red-700 text-sm">×</button>
+                    </td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="bg-gray-100 font-bold">
+                    <td class="border border-gray-300 p-1.5 text-right text-[11px]" colspan="2">TOTAL S/</td>
+                    <td class="border border-gray-300 p-1.5 text-center">
+                        <input type="text" id="presupuesto-total" readonly value="0.00" class="w-full text-center font-bold border-0 bg-transparent py-0.5 text-xs text-blue-900 focus:outline-none">
+                    </td>
+                    <td class="border border-gray-300 no-print"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Botón para añadir filas -->
+    <button type="button" onclick="agregarFilaPresupuesto()" class="no-print mt-2 text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1">+ Añadir artículo o servicio</button>
+
+    <!-- SUBSECCIÓN DE FIRMAS PARA EL PLAN -->
+    <div class="mt-4 pt-3 border-t border-gray-300">
+        <p class="font-bold text-[11px] text-gray-700 mb-2 uppercase text-center">Firmas:</p>
+        
+        <div class="flex justify-center">
+            <div class="bg-white p-2.5 rounded-lg border border-gray-200 w-full max-w-xs space-y-1 text-center">
+                <label class="block font-semibold text-[10px] text-gray-700">Líder de Organización</label>
+                
+                <!-- Recuadro de Firma Interactivo -->
+                <div class="w-full h-14 border border-dashed border-gray-400 rounded-md bg-gray-50 flex items-center justify-center relative overflow-hidden group mx-auto">
+                    <img id="img-firma-presupuesto" class="max-h-full max-w-full object-contain hidden" alt="Firma Líder">
+                    <span id="placeholder-presupuesto" class="text-[9px] text-gray-400 italic">Sin firma</span>
+                    
+                    <div class="no-print absolute inset-0 bg-black/40 flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button type="button" onclick="abrirModalFirma('presupuesto')" class="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-blue-700">Dibujar</button>
+                        <label class="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-emerald-700 cursor-pointer">
+                            Subir
+                            <input type="file" accept="image/*" class="hidden" onchange="cargarFotoFirma(event, 'presupuesto')">
+                        </label>
+                        <button type="button" onclick="limpiarFirma('presupuesto')" class="bg-red-600 text-white text-[9px] px-1 py-0.5 rounded shadow hover:bg-red-700">×</button>
+                    </div>
+                </div>
+                
+                <input type="text" class="w-full border border-gray-300 rounded-md py-0.5 px-1 bg-white text-[11px] text-center text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="Nombre completo del Líder">
+            </div>
+        </div>
+    </div>
+</div>
+ 
+
+</div>
+ <!-- BOTONES AL FINAL DE LA PÁGINA (Fuera del PDF, visibles solo en pantalla) -->
+    <div class="max-w-4xl mx-auto mt-6 flex justify-end space-x-3 no-print">
+        <button onclick="window.print()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-medium transition text-sm">Imprimir</button> 
+        <button onclick="generarPDF()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition text-sm">Descargar PDF</button>
+    </div>
+
+    <!-- Script JavaScript para Fecha por defecto y PDF -->
+    <script>
+        // Carga la fecha actual por defecto
+        document.getElementById('fecha-campo').valueAsDate = new Date();
+        // Control de activación/desactivación entre Presupuesto y Ofrenda de Ayuno
+     function cambiarTipoGastoUnico() {
+    const radioPresupuesto = document.querySelector('input[name="tipo_gasto_unico"][value="presupuesto"]');
+    const seccionPresupuesto = document.getElementById('seccion-presupuesto');
+    const seccionAyuno = document.getElementById('seccion-ayuno');
+    
+    const labelPresupuesto = document.getElementById('label-presupuesto');
+    const labelAyuno = document.getElementById('label-ayuno');
+
+    if (radioPresupuesto.checked) {
+        // Mostrar Presupuesto, Ocultar Ayuno
+        seccionPresupuesto.classList.remove('hidden');
+        seccionAyuno.classList.add('hidden');
+
+        // Estilos activos para Presupuesto
+        labelPresupuesto.className = "flex items-center justify-center space-x-1 border-2 border-blue-600 bg-blue-50 py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-blue-950 select-none transition-all";
+        // Estilos inactivos para Ayuno (compactos y limpios)
+        labelAyuno.className = "flex items-center justify-center space-x-1 border-2 border-gray-200 bg-white py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-gray-600 select-none transition-all";
+    } else {
+        // Mostrar Ayuno, Ocultar Presupuesto
+        seccionPresupuesto.classList.add('hidden');
+        seccionAyuno.classList.remove('hidden');
+
+        // Estilos inactivos para Presupuesto
+        labelPresupuesto.className = "flex items-center justify-center space-x-1 border-2 border-gray-200 bg-white py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-gray-600 select-none transition-all";
+        // Estilos activos para Ayuno
+        labelAyuno.className = "flex items-center justify-center space-x-1 border-2 border-blue-600 bg-blue-50 py-1.5 px-2 rounded-lg cursor-pointer font-bold text-xs text-blue-950 select-none transition-all";
+    }
+}
+
+function agregarCatPresupuesto() {
+    const contenedor = document.getElementById('contenedor-cat-presupuesto');
+    const div = document.createElement('div');
+    div.className = 'flex items-center space-x-2';
+    div.innerHTML = `
+        <select class="w-2/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs">
+            <option value="Administración">Administración</option>
+            <option value="JAS">JAS</option>
+            <option value="Quórum de Élderes">Quórum de Élderes</option>
+            <option value="Sociedad de Socorro">Sociedad de Socorro</option>
+            <option value="Esc. Dominical">Esc. Dominical</option>
+            <option value="Primaria">Primaria</option>
+            <option value="HH.JJ">HH.JJ</option>
+            <option value="MM.JJ">MM.JJ</option>
+        </select>
+        <input type="number" placeholder="S/ Monto" min="1" class="w-1/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-center">
+        <button onclick="eliminarFilaCat(this)" class="no-print text-red-500 font-bold px-1 hover:text-red-700">×</button>
+    `;
+    contenedor.appendChild(div);
+}
+
+function agregarCatAyuno() {
+    const contenedor = document.getElementById('contenedor-cat-ayuno');
+    const div = document.createElement('div');
+    div.className = 'flex items-center space-x-2';
+    div.innerHTML = `
+        <select class="w-2/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs">
+            <option value="Gastos Médicos">Gastos Médicos</option>
+            <option value="Gastos de Vivienda">Gastos de Vivienda</option>
+        </select>
+        <input type="number" placeholder="S/ Monto" min="1" class="w-1/3 border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-center">
+        <button onclick="eliminarFilaCat(this)" class="no-print text-red-500 font-bold px-1 hover:text-red-700">×</button>
+    `;
+    contenedor.appendChild(div);
+}
+
+function eliminarFilaCat(btn) {
+    btn.parentElement.remove();
+}
+// Limpiar el borde rojo automáticamente cuando el usuario escribe o cambia un campo
+document.getElementById('pdf-content').addEventListener('input', function(e) {
+    if (e.target.matches('input, textarea, select')) {
+        e.target.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+    }
+});
+
+document.getElementById('pdf-content').addEventListener('change', function(e) {
+    if (e.target.matches('input, textarea, select')) {
+        e.target.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+    }
+});
+        function generarPDF() {
+    const elemento = document.getElementById('pdf-content');
+    // 1. Obtener todos los campos de entrada
+    const todosLosInputs = elemento.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], textarea, select');
+    
+    // Limpiar marcas de error anteriores en todos los campos
+    todosLosInputs.forEach(input => {
+        input.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+    });
+
+    let primerInvalido = null;
+
+    // 2. Validar campos obligatorios (solo los visibles)
+    for (let input of todosLosInputs) {
+        if (input.closest('.hidden')) continue; // Ignorar sección oculta
+        
+        if (!input.value || input.value.trim() === '') {
+            // Marcar con borde rojo el campo faltante
+            input.classList.add('border-red-500', 'ring-2', 'ring-red-500');
+            
+            // Guardar referencia solo al primer campo inválido encontrado
+            if (!primerInvalido) {
+                primerInvalido = input;
+            }
+        }
+    }
+
+    // 3. Si hay errores, detener PDF, avisar y llevar la vista al primer error
+    if (primerInvalido) {
+        alert('Hay campos obligatorios sin llenar. Por favor, completa los campos marcados en rojo.');
+        primerInvalido.focus();
+        primerInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+    
+    // Forzar el desplazamiento a la parte superior antes de capturar
+    window.scrollTo(0, 0);
+
+    const opciones = {
+        margin:       [3, 8, 8, 8],
+        filename:     'Solicitud_de_Gastos.pdf',
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { 
+            scale: 3,
+            useCORS: true,
+            letterRendering: true,
+            scrollY: 0, // Ignora el scroll de la página y captura desde arriba
+            scrollX: 0,
+            windowWidth: document.documentElement.scrollWidth,
+            windowHeight: document.documentElement.scrollHeight
+        },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().from(elemento).set(opciones).save().then(() => {
+        // Restaurar la posición del scroll
+        window.scrollTo(0, scrollPos);
+    });
+}
+
+// --- LÓGICA DE FIRMAS DIGITALES Y SUBIDA DE IMÁGENES ---
+let firmanteActual = null;
+let trazando = false;
+let canvas = document.getElementById('canvas-firma');
+let ctx = canvas.getContext('2d');
+
+// Configuración del trazo suave en Canvas
+ctx.lineWidth = 2;
+ctx.lineCap = 'round';
+ctx.strokeStyle = '#0f172a';
+
+// Manejo de Dibujo (Mouse y Pantalla Táctil)
+function empezarTrazo(e) {
+    trazando = true;
+    ctx.beginPath();
+    const pos = obtenerPosicion(e);
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function moverTrazo(e) {
+    if (!trazando) return;
+    const pos = obtenerPosicion(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function detenerTrazo() {
+    trazando = false;
+}
+
+function obtenerPosicion(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+// Eventos de Canvas
+canvas.addEventListener('mousedown', empezarTrazo);
+canvas.addEventListener('mousemove', moverTrazo);
+canvas.addEventListener('mouseup', detenerTrazo);
+
+canvas.addEventListener('touchstart', empezarTrazo);
+canvas.addEventListener('touchmove', moverTrazo);
+canvas.addEventListener('touchend', detenerTrazo);
+
+// Modal Controls
+function abrirModalFirma(role) {
+    firmanteActual = role;
+    limpiarCanvasModal();
+    document.getElementById('modal-firma').classList.remove('hidden');
+}
+
+function cerrarModalFirma() {
+    document.getElementById('modal-firma').classList.add('hidden');
+    firmanteActual = null;
+}
+
+function limpiarCanvasModal() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function guardarFirmaCanvas() {
+    if (!firmanteActual) return;
+    const dataURL = canvas.toDataURL('image/png');
+    asignarImagenFirma(firmanteActual, dataURL);
+    cerrarModalFirma();
+}
+
+// Subida de imagen desde archivos
+function cargarFotoFirma(event, role) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            asignarImagenFirma(role, e.target.result);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+// Asignación de imagen al recuadro visual
+function asignarImagenFirma(role, src) {
+    const img = document.getElementById(`img-firma-${role}`);
+    const placeholder = document.getElementById(`placeholder-${role}`);
+    
+    img.src = src;
+    img.classList.remove('hidden');
+    placeholder.classList.add('hidden');
+}
+
+// Borrar Firma
+function limpiarFirma(role) {
+    const img = document.getElementById(`img-firma-${role}`);
+    const placeholder = document.getElementById(`placeholder-${role}`);
+    
+    img.src = '';
+    img.classList.add('hidden');
+    placeholder.classList.remove('hidden');
+}
+function calcularTotalAsistencia() {
+    // Obtener los valores de los 4 inputs editables (si están vacíos se toma como 0)
+    const inv = parseInt(document.getElementById('asist-investigadores').value) || 0;
+    const menosActivos = parseInt(document.getElementById('asist-menos-activos').value) || 0;
+    const activos = parseInt(document.getElementById('asist-activos').value) || 0;
+    const lideres = parseInt(document.getElementById('asist-lideres').value) || 0;
+
+    // Calcular la suma total
+    const total = inv + menosActivos + activos + lideres;
+
+    // Asignar el resultado a la casilla de total de asistencia de manera automática
+    document.getElementById('asist-total').value = total;
+}
+// Función para añadir una nueva fila de participante en el Comité de Limpieza
+function agregarFilaComite() {
+    const contenedor = document.getElementById('contenedor-comite-limpieza');
+    
+    const nuevaFila = document.createElement('div');
+    nuevaFila.className = "flex items-center space-x-2";
+    nuevaFila.innerHTML = `
+        <input type="text" class="w-full border border-gray-300 rounded-lg py-0.5 px-2 bg-white text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Apellidos y Nombres">
+        <button type="button" onclick="eliminarFilaComite(this)" class="no-print text-red-500 font-bold px-1.5 hover:text-red-700 text-sm">×</button>
+    `;
+    
+    contenedor.appendChild(nuevaFila);
+}
+
+// Función para eliminar una fila específica (asegurando que quede al menos una)
+function eliminarFilaComite(boton) {
+    const contenedor = document.getElementById('contenedor-comite-limpieza');
+    if (contenedor.children.length > 1) {
+        boton.parentElement.remove();
+    } else {
+        alert('Debe mantener al menos una línea en el comité de limpieza.');
+    }
+}
+// Función para añadir una nueva fila en el Plan de Presupuesto (con las 3 columnas)
+function agregarFilaPresupuesto() {
+    const contenedor = document.getElementById('contenedor-filas-presupuesto');
+    
+    const nuevaFila = document.createElement('tr');
+    nuevaFila.innerHTML = `
+        <td class="border border-gray-300 p-1">
+            <input type="number" min="1" value="" placeholder="1" class="w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+        </td>
+        <td class="border border-gray-300 p-1">
+            <input type="text" placeholder="Descripción del artículo o servicio" class="w-full border-0 bg-transparent py-1 px-2 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+        </td>
+        <td class="border border-gray-300 p-1">
+            <input type="number" step="0.01" min="0" value="" placeholder="0.00" oninput="calcularTotalPresupuesto()" class="input-importe w-full text-center border-0 bg-transparent py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 rounded">
+        </td>
+        <td class="border border-gray-300 p-1 no-print text-center">
+            <button type="button" onclick="eliminarFilaPresupuesto(this)" class="text-red-500 font-bold hover:text-red-700 text-sm">×</button>
+        </td>
+    `;
+    
+    contenedor.appendChild(nuevaFila);
+}
+
+// Función para eliminar fila asegurando que siempre quede al menos una
+function eliminarFilaPresupuesto(boton) {
+    const contenedor = document.getElementById('contenedor-filas-presupuesto');
+    if (contenedor.children.length > 1) {
+        boton.closest('tr').remove();
+        calcularTotalPresupuesto();
+    } else {
+        alert('Debe mantener al menos una línea en el plan de presupuesto.');
+    }
+}
+
+// Función para sumar automáticamente los importes de la columna Importe S/
+function calcularTotalPresupuesto() {
+    const inputs = document.querySelectorAll('.input-importe');
+    let sumaTotal = 0;
+
+    inputs.forEach(input => {
+        const valor = parseFloat(input.value) || 0;
+        sumaTotal += valor;
+    });
+
+    document.getElementById('presupuesto-total').value = sumaTotal.toFixed(2);
+}
+      
+    </script>
+</body>
+</html>
