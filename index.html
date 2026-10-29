@@ -482,7 +482,7 @@
  <!-- BOTONES AL FINAL DE LA PÁGINA (Fuera del PDF, visibles solo en pantalla) -->
     <div class="max-w-4xl mx-auto mt-6 flex justify-end space-x-3 no-print">
         <button onclick="window.print()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 font-medium transition text-sm">Imprimir</button> 
-        <button onclick="generarPDF()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition text-sm">Descargar PDF</button>
+        <button onclick="procesarImpresionOSolicitud()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition text-sm">Descargar PDF</button>
     </div>
 
     <!-- Script JavaScript para Fecha por defecto y PDF -->
@@ -570,40 +570,132 @@ document.getElementById('pdf-content').addEventListener('change', function(e) {
         e.target.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
     }
 });
-        function generarPDF() {
-    const elemento = document.getElementById('pdf-content');
-    // 1. Obtener todos los campos de entrada
-    const todosLosInputs = elemento.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], textarea, select');
-    
-    // Limpiar marcas de error anteriores en todos los campos
-    todosLosInputs.forEach(input => {
-        input.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+
+function validarFormulario() {
+    // 1. Limpiar todos los errores previos (quitar bordes rojos de campos anteriores)
+    document.querySelectorAll('.border-red-500').forEach(el => {
+        el.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+        el.classList.add('border-gray-300');
     });
 
-    let primerInvalido = null;
+    let primerError = null;
 
-    // 2. Validar campos obligatorios (solo los visibles)
-    for (let input of todosLosInputs) {
-        if (input.closest('.hidden')) continue; // Ignorar sección oculta
+    // Función auxiliar interna para registrar el error y capturar solo al primer infractor
+    function registrarError(elemento) {
+        if (!elemento) return;
+        elemento.classList.remove('border-gray-300');
+        elemento.classList.add('border-red-500', 'ring-2', 'ring-red-300');
         
-        if (!input.value || input.value.trim() === '') {
-            // Marcar con borde rojo el campo faltante
-            input.classList.add('border-red-500', 'ring-2', 'ring-red-500');
-            
-            // Guardar referencia solo al primer campo inválido encontrado
-            if (!primerInvalido) {
-                primerInvalido = input;
+        // Limpiar el error en tiempo real cuando el usuario comience a escribir
+        elemento.addEventListener('input', function() {
+            if (this.value.trim()) {
+                this.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+                this.classList.add('border-gray-300');
             }
+        }, { once: true });
+
+        if (!primerError) {
+            primerError = elemento;
         }
     }
 
-    // 3. Si hay errores, detener PDF, avisar y llevar la vista al primer error
-    if (primerInvalido) {
-        alert('Hay campos obligatorios sin llenar. Por favor, completa los campos marcados en rojo.');
-        primerInvalido.focus();
-        primerInvalido.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        return;
+    // 2. Validar Campos Generales Obligatorios (Solicitante, Cobrador, Dirección)
+    const inputSolicitante = document.querySelector('input[placeholder*="Dennis Polo Avila"]');
+    const inputCobrador = document.querySelector('input[placeholder*="Nombres y apellidos completos"]');
+    const inputDireccion = document.querySelector('input[placeholder*="Dirección completa"]');
+
+    if (inputSolicitante && !inputSolicitante.value.trim()) registrarError(inputSolicitante);
+    if (inputCobrador && !inputCobrador.value.trim()) registrarError(inputCobrador);
+    if (inputDireccion && !inputDireccion.value.trim()) registrarError(inputDireccion);
+
+    // 3. Validar según el tipo de gasto activo (Mutuamente Exclusivo)
+    const radioPresupuesto = document.querySelector('input[name="tipo_gasto_unico"][value="presupuesto"]');
+
+    if (radioPresupuesto && radioPresupuesto.checked) {
+        // --- VALIDACIÓN DE PRESUPUESTO ---
+        // Descripción
+        const descPresupuesto = document.querySelector('#seccion-presupuesto input[type="text"]');
+        if (descPresupuesto && !descPresupuesto.value.trim()) {
+            registrarError(descPresupuesto);
+        }
+
+        // Propósito (textarea o input de propósito)
+        const propositoPresupuesto = document.querySelector('#seccion-presupuesto textarea, #seccion-presupuesto input[placeholder*="propósito"]');
+        if (propositoPresupuesto && !propositoPresupuesto.value.trim()) {
+            registrarError(propositoPresupuesto);
+        }
+
+        // Cantidades / Importes de las filas de presupuesto
+        const inputsImportePresupuesto = document.querySelectorAll('#seccion-presupuesto .input-importe, #seccion-presupuesto input[type="number"]');
+        inputsImportePresupuesto.forEach(input => {
+            if (!input.value.trim() || parseFloat(input.value) <= 0) {
+                registrarError(input);
+            }
+        });
+
+    } else {
+        // --- VALIDACIÓN DE OFRENDAS DE AYUNO ---
+        const inputsAyuno = document.querySelectorAll('#seccion-ayuno input[type="text"], #seccion-ayuno input[type="number"]');
+        inputsAyuno.forEach(input => {
+            if (!input.value.trim()) {
+                registrarError(input);
+            }
+        });
     }
+    // 4. VALIDACIÓN EN LA SECCIÓN DE FIRMAS: NOMBRE Y FECHA DEL COBRADOR OBLIGATORIOS
+    // Buscamos específicamente el input de texto y el input de fecha del bloque del cobrador en las firmas
+    const inputsFirmas = document.querySelectorAll('.grid-cols-3 > div'); // Las 3 columnas de firmas
+    if (inputsFirmas.length >= 3) {
+        // El cobrador es la tercera columna de firmas
+        const columnaCobrador = inputsFirmas[2]; 
+        const nombreCobrador = columnaCobrador.querySelector('input[type="text"]');
+        const fechaCobrador = columnaCobrador.querySelector('input[type="date"]');
+
+        if (nombreCobrador && !nombreCobrador.value.trim()) {
+            registrarError(nombreCobrador);
+        }
+        if (fechaCobrador && !fechaCobrador.value.trim()) {
+            registrarError(fechaCobrador);
+        }
+    }
+
+    // 5. Si se detectó algún error, hacer scroll suave exacto y enfocar
+    if (primerError) {
+        primerError.focus({ preventScroll: true });
+        primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        alert('Por favor, complete los campos obligatorios marcados en rojo.');
+        return false; // Detiene la acción
+    }
+
+    return true; // Todo correcto
+}
+
+// Función auxiliar para marcar el borde en rojo
+function marcarError(elemento) {
+    elemento.classList.remove('border-gray-300');
+    elemento.classList.add('border-red-500', 'ring-2', 'ring-red-300');
+    
+    // Limpiar el error automáticamente en tiempo real cuando el usuario comience a escribir
+    elemento.addEventListener('input', function() {
+        if (this.value.trim()) {
+            this.classList.remove('border-red-500', 'ring-2', 'ring-red-300');
+            this.classList.add('border-gray-300');
+        }
+    }, { once: true });
+}
+ function procesarImpresionOSolicitud() {
+    if (!validarFormulario()) {
+        return; // Si la validación falla, se detiene aquí y no descarga nada
+    }
+    
+    // Si pasa la validación con éxito, ejecuta la generación del PDF con formato JPEG optimizado
+    generarPDF(); 
+}
+
+        function generarPDF() {
+    const elemento = document.getElementById('pdf-content');
+    // 1. Obtener todos los campos de entrada
+    
     
     // Forzar el desplazamiento a la parte superior antes de capturar
     window.scrollTo(0, 0);
