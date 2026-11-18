@@ -240,7 +240,7 @@
                 <label class="block font-semibold text-[10px] text-gray-700 mb-0.5">Firma:</label>
                 <div class="w-full h-10 border border-dashed border-gray-400 rounded-md bg-gray-50 flex items-center justify-center relative overflow-hidden group">
                     <img id="img-firma-secretario" class="max-h-full max-w-full object-contain hidden" alt="Firma Secretario">
-                    <span id="placeholder-secretario" class="text-[9px] text-gray-400 italic">Sin firma</span>
+                    <span id="placeholder-secretario" class="text-[9px] text-gray-400 italic"></span>
                     
                     <div class="no-print absolute inset-0 bg-black/40 flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button" onclick="abrirModalFirma('secretario')" class="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded shadow hover:bg-blue-700">Dibujar</button>
@@ -727,7 +727,12 @@ function marcarError(elemento) {
         // Restaurar la posición del scroll
         window.scrollTo(0, scrollPos);
         
+        // Recargar la página automáticamente después de 1 segundo para limpiar todo el formulario
+       
     });
+     setTimeout(() => {
+            location.reload();
+        }, 1000);
 }
 
 // --- LÓGICA DE FIRMAS DIGITALES Y SUBIDA DE IMÁGENES ---
